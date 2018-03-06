@@ -1,0 +1,148 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+library(RCurl)
+existing_cases_file <- getURL("https://docs.google.com/spreadsheets/d/1X5Jp7Q8pTs3KLJ5JBWKhncVACGsg5v4xu6badNs4C7I/pub?gid=0&output=csv")
+当X是matrix, c（1，2，3）col
+
+gsub() function replaces all matches of a string
+gsub(pattern, replacement, x, ignore.case = FALSE, perl = FALSE,
+    fixed = FALSE, useBytes = FALSE)
+  可以正则表达
+```{r gsub}
+x <- "line 4322: He is now 25 years old, and weights 130lbs"
+y1 <- gsub("\\d+","---",x)
+y1
+
+y2 <- gsub("[[:lower:]]","-",x)
+y2
+
+x <- c("R Tutorial","PHP Tutorial", "HTML Tutorial")
+gsub("Tutorial","Examples",x)
+```
+  csv 变量格式 as.string as. integer
+```{r dsatasets}
+setwd('/Volumes/win/CS/ds/dimred')
+existing_df <- read.csv("TB.csv", row.names=1)
+existing_df[c(1,2,3,4,5,6,15,16,17,18)] <- 
+    lapply( existing_df[c(1,2,3,4,5,6,15,16,17,18)], 
+            function(x) { as.integer(gsub(',', '', x) )})
+str(existing_df)
+```
+
+```{r}
+ existing_df[c(1,2)]
+```
+
+```{r pca}
+pca_existing <- prcomp(existing_df, scale. = TRUE)
+str(pca_existing)
+summary(pca_existing)
+plot(pca_existing)
+```
+We are interested in the scores, that we have in pca_existing$x
+Most variation is explained by the first PC. So let's use the first two PCs to represent all of our countries in a scatterplot.
+score-variances
+```{r reconstruct}
+scores_existing_df <- as.data.frame(pca_existing$x)
+# Show first two PCs for head countries
+head(scores_existing_df)
+```
+
+```{r plot}
+biplot(pca_existing)
+plot(PC1~PC2, data=scores_existing_df, 
+     main= "Existing TB cases per 100K distribution",
+     cex = .1, lty = "solid")
+text(PC1~PC2, data=scores_existing_df, 
+     labels=rownames(existing_df),
+     cex=.8)
+```
+Let's set the color associated with the mean value for all the years. We will use functions rgb, ramp, and rescale to create a color palette from yellow (lower values) to blue (higher values).
+```{r coloryear}
+library(scales)
+ramp <- colorRamp(c("red","yellow", "green","blue"))
+colours_by_mean <- rgb( 
+    ramp( as.vector(rescale(rowMeans(existing_df),c(0,1)))), 
+    max = 255 )
+plot(PC1~PC2, data=scores_existing_df, 
+     main= "Existing TB cases per 100K distribution",
+     cex = .1, lty = "solid", col=colours_by_mean)
+text(PC1~PC2, data=scores_existing_df, 
+     labels=rownames(existing_df),
+     cex=.8, col=colours_by_mean)
+```
+X2000 similar to PCA1 most
+
+```{r X2000}
+library(scales)
+ramp <- colorRamp(c("red","yellow", "green","blue"))
+colours_by_mean <- rgb( 
+    ramp( as.vector(rescale(existing_df$X2000,c(0,1)))), 
+    max = 255 )
+plot(PC1~PC2, data=scores_existing_df, 
+     main= "Existing TB cases per 100K distribution",
+     cex = .1, lty = "solid", col=colours_by_mean)
+text(PC1~PC2, data=scores_existing_df, 
+     labels=rownames(existing_df),
+     cex=.8, col=colours_by_mean)
+```
+
+
+```{r changeplot}
+existing_df_change <- existing_df$X2008 - existing_df$X1991
+ramp <- colorRamp(c("red","yellow", "green","blue"))
+colours_by_change <- rgb( 
+    ramp( as.vector(rescale(existing_df_change,c(0,1)))), 
+    max = 255 )
+plot(PC1~PC2, data=scores_existing_df, 
+     main= "Existing TB cases per 100K distribution",
+     cex = .1, lty = "solid", col=colours_by_change)
+text(PC1~PC2, data=scores_existing_df, 
+     labels=rownames(existing_df),
+     cex=.8, col=colours_by_change)
+```
+cluster: A vector of integers indicating the cluster to which each point is allocated.
+centers: A matrix of cluster centres.
+withinss: The within-cluster sum of square distances for each cluster.
+size: The number of points in each cluster
+```{r kmeans}
+set.seed(1234)
+existing_clustering <- kmeans(existing_df, centers = 3)
+str(existing_clustering)
+existing_clustering$centers[1,]
+existing_cluster_groups <- existing_clustering$cluster
+plot(PC1~PC2, data=scores_existing_df, 
+     main= "Existing TB cases per 100K distribution",
+     cex = .1, lty = "solid", col=existing_cluster_groups)
+text(PC1~PC2, data=scores_existing_df, 
+     labels=rownames(existing_df),
+     cex=.8, col=existing_cluster_groups)
+```
+Let's start by creating a line chart that compares the time series for each cluster centroid. This chart will helps us better understand our cluster results
+existing_clustering$centers[1,]
+```{r cluster}
+existing_df$cluster <- existing_clustering$cluster
+table(existing_df$cluster)
+xrange <- 1990:2007
+plot(xrange, existing_clustering$centers[1,], 
+     type='l', xlab="Year", 
+     ylab="New cases per 100K", 
+     col = 1, 
+     ylim=c(0,1000))
+for (i in 2:nrow(existing_clustering$centers)) {
+    lines(xrange, existing_clustering$centers[i,],
+    col = i)
+}
+legend(x=1990, y=1000, 
+       lty=1, cex = 0.5,
+       ncol = 5,
+       col=1:(nrow(existing_clustering$centers)+1),
+       legend=paste("Cluster",1:nrow(existing_clustering$centers)))
+```
+
+```{r}
+for (i in 2:nrow(existing_clustering$centers)){print(rownames(subset(existing_df, cluster==i)))}
+```
+

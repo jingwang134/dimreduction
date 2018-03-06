@@ -1,0 +1,53 @@
+---
+title: "pca"
+author: "Wj"
+date: "2018/2/25"
+output: html_document
+---
+
+```{r datasets}
+library(HDclassif)
+data(wine)
+str(wine)
+```
+
+Unfortunately the chemical constituents are named V1-V13. Let’s fix that.
+
+
+
+```{r rename datasets}
+names(wine) <- c("Type", "Alcohol", "Malic acid", "Ash", "Alcalinity of ash", 
+"Magnesium", "Total phenols", "Flavanoids", "Nonflavanoid phenols", 
+"Proanthocyanins", "Color intensity", "Hue", "OD280/OD315 of diluted wines", 
+"Proline")
+```
+
+
+We can use the prcomp function from the stats package to do the PCA.
+Cumulative Proportion  the first two components account for over 55% of the variance in the entire data set. 
+
+```{r stats}
+library(stats)
+wine_pca <- prcomp(wine, center = TRUE, scale = TRUE) 
+summary(wine_pca)
+```
+This produces a scatter plot of all the wines. Wines that are close to each other should have similar chemical compositions. We can see wines 4 and 19 at the top left. Let’s compare them.
+
+```{r visualize}
+biplot(wine_pca)
+```
+
+```{r compare}
+wine[c(4, 19),]
+```
+red arrows (vectors)
+The vectors show the relationship between the original variables and the principal components. So, “Alcalinity of ash” is similar to PC1. 
+The length of the vector represents the strength of the correlation between the original variable and the principal components.
+
+Variables that are represented by vectors pointing in similar directions have similar meanings. So, “Proanthocyanins” and “Total phenols” seem to represent similar concepts in the context of our significantly reduced data set.
+
+```{r feature visualize}
+biplot(wine_pca, xlabs = rep("", nrow(wine)))
+
+```
+
